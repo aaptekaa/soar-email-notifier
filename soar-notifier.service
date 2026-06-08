@@ -1,0 +1,13 @@
+[Unit]
+Description=SOAR Alert Email Notifier
+After=network.target resilient.service
+Wants=resilient.service
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /opt/soar-notifier.py
+Restart=always
+RestartSec=30
+
+[Install]
+WantedBy=multi-user.target
