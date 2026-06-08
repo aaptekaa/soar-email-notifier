@@ -1,23 +1,42 @@
 # SOAR Email Notifier
 
-Sends beautiful HTML email notifications when new incidents appear in **IBM QRadar SOAR**. Uses Exchange SMTP with STARTTLS. Runs as a systemd service.
+Sends HTML email notifications for **new** and **closed** incidents in **IBM QRadar SOAR**. Uses Exchange SMTP with STARTTLS. Runs as a systemd service, polling every 30 seconds.
 
-## What it does
+## Features
 
-- Checks SOAR for new incidents every 30 seconds (comparing against the last known ID)
-- Sends an HTML email with full incident details via Exchange SMTP
-- Embeds the QRadar HTML description directly into the email (formatted offense details table)
-- Displays Active Directory enrichment data in a dedicated section
-- Persists the last processed incident ID so the service resumes correctly after restart
+- **New incident** email — sent immediately when a new incident appears in SOAR
+- **Closed incident** email — sent when an incident is closed, with full closure details
+- Tracks who opened and who closed each incident (from SOAR audit history)
+- Shows resolution type, resolution notes, and time-to-close duration
+- On startup, automatically seeds all currently open incidents into tracking (no duplicate emails)
+- Persists state in JSON across restarts — safe to restart anytime
+- Backward-compatible with old `last_incident_id.txt` state file (auto-migrates)
 
-## Email Layout
+## Email: New Incident
 
-Each notification contains:
-- **Dark gradient header** with a color-coded severity badge
-- **Three-column row**: Incident ID, severity level, creation date
-- **QRadar section**: HTML table with offense ID, Source IP, categories, event count
-- **Active Directory section**: user, department, account status, group membership
-- **"Open in SOAR" button** with a direct link to the incident
+Dark gradient header with severity badge and incident details:
+
+- Incident ID, severity (color-coded), creation date
+- Full QRadar offense description (HTML table: Source IP, categories, event count)
+- **Open in SOAR** button
+
+Subject: `[SOAR] New Incident #2191: QRadar ID 138, Excessive Login Failures...`
+
+## Email: Incident Closed
+
+Green gradient header with full closure summary:
+
+| Field | Example |
+|-------|---------|
+| Incident ID | #2190 |
+| Severity | High (5) |
+| Duration | 1h 5m |
+| Opened | 2026-06-08 11:09:23 (by Maxim Adminov) |
+| Closed | 2026-06-08 12:17:55 (by Maxim Adminov) |
+| Resolution | Resolved |
+| Resolution Notes | Investigation complete, threat mitigated |
+
+Subject: `[SOAR] Incident Closed #2190: QRadar ID 136, Excessive Login Failures...`
 
 ## Severity Color Scheme
 
@@ -34,9 +53,9 @@ Each notification contains:
 
 - Python 3.6+
 - `requests` library (`pip install requests`)
-- Exchange Server with SMTP enabled on port 587 (STARTTLS)
+- Exchange Server with SMTP on port 587 (STARTTLS)
 - A sender mailbox in Exchange
-- RHEL/CentOS/Debian with systemd
+- RHEL / CentOS / Debian with systemd
 
 ### 1. Install dependencies
 
@@ -69,17 +88,13 @@ SMTP_PASS = 'password'           # Sender password
 SMTP_FROM = 'soar@example.com'  # From address
 SMTP_TO   = 'admin@example.com' # Recipient
 
-CHECK_INTERVAL = 30   # Check interval in seconds
-STATE_FILE = '/var/lib/soar-notifier/last_incident_id.txt'
+CHECK_INTERVAL = 30   # Poll interval in seconds
 ```
 
-### 4. Set baseline incident ID (recommended)
-
-To avoid receiving emails for all historical incidents on first run:
+### 4. Set baseline (optional, prevents flood on first run)
 
 ```bash
-# Find current max incident ID and write it
-echo 2186 > /var/lib/soar-notifier/last_incident_id.txt
+echo 2190 > /var/lib/soar-notifier/last_incident_id.txt
 ```
 
 ### 5. Install systemd service
@@ -101,29 +116,47 @@ tail -f /var/log/soar-notifier.log
 ## Log Example
 
 ```
-2026-06-08 09:43:53 [INFO] SOAR Email Notifier started
-2026-06-08 09:43:53 [INFO] Starting from incident ID > 2184
-2026-06-08 09:50:27 [INFO] Found 2 new incident(s)
-2026-06-08 09:50:27 [INFO] Email sent for incident #2185: QRadar ID 133, Excessive Login Failures...
-2026-06-08 09:50:28 [INFO] Email sent for incident #2186: QRadar ID 132, Excessive Login Failures...
+2026-06-08 12:16:27 [INFO] SOAR Email Notifier started (new + closed incidents)
+2026-06-08 12:16:27 [INFO] Starting from incident ID > 2190, tracking 0 open incident(s)
+2026-06-08 12:16:27 [INFO] Seeded 2 currently open incident(s) for closure tracking
+2026-06-08 12:17:00 [INFO] Found 1 new incident(s)
+2026-06-08 12:17:00 [INFO] New incident email sent for #2191: QRadar ID 138...
+2026-06-08 12:17:58 [INFO] Closure email sent for incident #2190: QRadar ID 136...
 ```
 
-## State Files
+## State File
+
+State is stored in `/var/lib/soar-notifier/state.json`:
+
+```json
+{
+  "last_id": 2191,
+  "open_incidents": {
+    "2191": {
+      "name": "QRadar ID 138, Excessive Login Failures...",
+      "create_ts": 1780902649932
+    }
+  }
+}
+```
 
 | File | Purpose |
 |------|---------|
-| `/var/lib/soar-notifier/last_incident_id.txt` | Last processed incident ID |
+| `/var/lib/soar-notifier/state.json` | Last ID + open incidents tracking |
 | `/var/log/soar-notifier.log` | Service log |
 
 ## Exchange Prerequisites
 
 On the Exchange server:
-1. Create a mailbox for the sender (`soar@domain.com`)
+
+1. Create a sender mailbox (`soar@domain.com`)
 2. Enable Authenticated SMTP submission on port 587
-3. Open port 587 in Windows Firewall for the SOAR server IP:
-   ```
-   netsh advfirewall firewall add rule name="SMTP-587 SOAR" dir=in action=allow protocol=TCP localport=587 remoteip=192.168.2.0/24
-   ```
+3. Open port 587 in Windows Firewall for the SOAR server:
+
+```
+netsh advfirewall firewall add rule name="SMTP-587 SOAR" ^
+  dir=in action=allow protocol=TCP localport=587 remoteip=192.168.2.0/24
+```
 
 ## Stack
 
