@@ -164,3 +164,7 @@ netsh advfirewall firewall add rule name="SMTP-587 SOAR" ^
 - **Microsoft Exchange** 2016+
 - **Python** 3.6+
 - **RHEL** 8.x / systemd
+
+<img width="1326" height="834" alt="image" src="https://github.com/user-attachments/assets/605416bc-f8ab-4607-a843-1e073fffc846" />
+<img width="1307" height="829" alt="image" src="https://github.com/user-attachments/assets/5e63553d-6578-4922-ba12-762d90d0bca8" />
+
