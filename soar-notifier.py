@@ -20,10 +20,10 @@ SOAR_ORG_ID = 201
 
 SMTP_HOST = "192.168.5.2"
 SMTP_PORT = 587
-SMTP_USER = "soar@test.com"
+SMTP_USER = "soar@test.comb"
 SMTP_PASS = "AdminPass"
-SMTP_FROM = "soar@pcf.lab"
-SMTP_TO = "administrator@pcf.lab"
+SMTP_FROM = "soar@test.com"
+SMTP_TO = "administrator@test.com"
 
 CHECK_INTERVAL = 30
 STATE_FILE = "/var/lib/soar-notifier/last_incident_id.txt"
@@ -104,7 +104,7 @@ def build_html_email(inc_id, inc_name, severity_code, created, description_html,
         </tr>"""
 
     return f"""<!DOCTYPE html>
-<html lang="ru">
+<html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#f0f2f5;font-family:Arial,sans-serif;">
 <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f2f5;padding:32px 0;">
@@ -118,7 +118,7 @@ def build_html_email(inc_id, inc_name, severity_code, created, description_html,
             <tr>
               <td>
                 <p style="margin:0;font-size:11px;color:#8899aa;text-transform:uppercase;letter-spacing:1px;">IBM QRadar SOAR</p>
-                <p style="margin:4px 0 0;font-size:20px;font-weight:700;color:#fff;">A new incident</p>
+                <p style="margin:4px 0 0;font-size:20px;font-weight:700;color:#fff;">New Incident</p>
               </td>
               <td align="right">
                 <span style="background:{sev_color};color:#fff;font-size:12px;font-weight:700;padding:5px 14px;border-radius:20px;text-transform:uppercase;letter-spacing:.5px;">{sev_label}</span>
@@ -131,7 +131,7 @@ def build_html_email(inc_id, inc_name, severity_code, created, description_html,
       <!-- Incident title -->
       <tr>
         <td style="padding:20px 24px 12px;border-bottom:1px solid #e9ecef;">
-          <p style="margin:0 0 4px;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;">Name of the incident</p>
+          <p style="margin:0 0 4px;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;">Incident Name</p>
           <p style="margin:0;font-size:15px;font-weight:600;color:#1a1a2e;">{inc_name}</p>
         </td>
       </tr>
@@ -142,15 +142,15 @@ def build_html_email(inc_id, inc_name, severity_code, created, description_html,
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
               <td width="33%" style="padding:0 8px 12px 0;vertical-align:top;">
-                <p style="margin:0 0 3px;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;">OFFENSE ID</p>
+                <p style="margin:0 0 3px;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;">Incident ID</p>
                 <p style="margin:0;font-size:22px;font-weight:700;color:#0f3460;">#{inc_id}</p>
               </td>
               <td width="33%" style="padding:0 8px 12px;vertical-align:top;">
-                <p style="margin:0 0 3px;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;">SEVERITY</p>
+                <p style="margin:0 0 3px;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;">Severity</p>
                 <p style="margin:0;font-size:15px;font-weight:600;color:{sev_color};">{sev_label} ({severity_code})</p>
               </td>
               <td width="33%" style="padding:0 0 12px 8px;vertical-align:top;">
-                <p style="margin:0 0 3px;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;">CREATED</p>
+                <p style="margin:0 0 3px;font-size:11px;color:#888;text-transform:uppercase;letter-spacing:.5px;">Created</p>
                 <p style="margin:0;font-size:13px;color:#333;">{created}</p>
               </td>
             </tr>
@@ -164,7 +164,7 @@ def build_html_email(inc_id, inc_name, severity_code, created, description_html,
       <tr>
         <td style="padding:20px 24px 24px;">
           <a href="{url}" style="display:inline-block;background:#0f3460;color:#fff;text-decoration:none;font-size:13px;font-weight:600;padding:10px 24px;border-radius:6px;">
-            Открыть в SOAR &rarr;
+            Open in SOAR &rarr;
           </a>
         </td>
       </tr>
@@ -172,7 +172,7 @@ def build_html_email(inc_id, inc_name, severity_code, created, description_html,
       <!-- Footer -->
       <tr>
         <td style="background:#f8f9fa;border-top:1px solid #e9ecef;padding:14px 24px;">
-          <p style="margin:0;font-size:11px;color:#999;">IBM QRadar SOAR &bull; {datetime.now().strftime('%d.%m.%Y %H:%M')}</p>
+          <p style="margin:0;font-size:11px;color:#999;">Automated notification from IBM QRadar SOAR &bull; {datetime.now().strftime('%Y-%m-%d %H:%M')}</p>
         </td>
       </tr>
 
@@ -188,26 +188,26 @@ def send_email(incident):
     inc_name = incident.get("name", "Unknown")
     severity = incident.get("severity_code", "N/A")
     created_ts = incident.get("create_date", 0)
-    created = datetime.fromtimestamp(created_ts / 1000).strftime("%d.%m.%Y %H:%M:%S") if created_ts else "N/A"
+    created = datetime.fromtimestamp(created_ts / 1000).strftime("%Y-%m-%d %H:%M:%S") if created_ts else "N/A"
     description = incident.get("description", {})
     if isinstance(description, dict):
         description = description.get("content", "")
 
     url = f"{SOAR_URL}/#incidents/{inc_id}"
-    subject = f"[SOAR] Новый инцидент #{inc_id}: {inc_name[:60]}"
+    subject = f"[SOAR] New Incident #{inc_id}: {inc_name[:60]}"
 
     html_body = build_html_email(inc_id, inc_name, severity, created, description, url)
 
     plain_desc = strip_html(description) if description else "N/A"
     plain_body = (
-        f"IBM QRadar SOAR - New Offense\n"
+        f"IBM QRadar SOAR - New Incident\n"
         f"{'='*50}\n\n"
         f"ID:          #{inc_id}\n"
-        f"Title:    {inc_name}\n"
-        f"Severity: {severity}\n"
-        f"Created:      {created}\n"
-        f"Description:    {plain_desc}\n\n"
-        f"Link: {url}\n"
+        f"Name:        {inc_name}\n"
+        f"Severity:    {severity}\n"
+        f"Created:     {created}\n"
+        f"Description: {plain_desc}\n\n"
+        f"URL: {url}\n"
     )
 
     msg = MIMEMultipart("alternative")
